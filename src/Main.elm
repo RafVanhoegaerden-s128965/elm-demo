@@ -1,58 +1,69 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, div, input, button, ul, li, text)
-import Html.Attributes exposing (placeholder, value, classList)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, input, button, text, ul, li, h1)
+import Html.Attributes exposing (placeholder, value, style, class)
+import Html.Events exposing (onClick, onInput)
 
-type alias Task =
-    { id : Int
-    , description : String
+-- MODEL
+type alias Model =
+    { todos : List Todo
+    , newTodo : String
+    , title : String
+    }
+
+type alias Todo =
+    { text : String
     , done : Bool
     }
 
-type alias Model =
-    { tasks : List Task
-    , newTask : String
-    , filter : String
-    }
-
--- Initialize
+-- INITIALIZE
 init : Model
 init =
-    { tasks = []
-    , newTask = ""
-    , filter = "all"
+    { todos = []
+    , newTodo = ""
+    , title = "My To-Do List"
     }
 
--- Message
+-- MESSAGE
 type Msg
-    = NoOp
+    = AddTodo
+    | ToggleTodo Int
+    | UpdateNewTodo String
 
--- Update
+-- UPDATE
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        NoOp ->
-            model
+        AddTodo ->
+            if model.newTodo /= "" then
+                { model | todos = { text = model.newTodo, done = False } :: model.todos, newTodo = "" }
+            else
+                model
 
--- View
+        ToggleTodo index ->
+            { model | todos = List.indexedMap (\i todo -> if i == index then { todo | done = not todo.done } else todo) model.todos }
+
+        UpdateNewTodo newText ->
+            { model | newTodo = newText }
+
+-- VIEW
 view : Model -> Html Msg
 view model =
-    div []
-        [ input [ placeholder "New task", value model.newTask ] []
-        , button [ onClick NoOp ] [ text "Add Task" ]
-        , viewTasks model.tasks
+    div [style "margin" "30px"]
+        [ h1 [style "font-family" "Arial", style "font-size" "24px"] [text model.title]
+        , input [placeholder "New Todo", value model.newTodo, onInput UpdateNewTodo] []
+        , button [onClick AddTodo, style "margin-left" "10px"] [text "Add Todo"]
+        , ul [] (List.indexedMap viewTodo model.todos)
         ]
 
-viewTasks : List Task -> Html Msg
-viewTasks tasks =
-    ul [] (List.map viewTask tasks)
+viewTodo : Int -> Todo -> Html Msg
+viewTodo index todo =
+    li [class "todo-items",style "font-family" "Arial", style "font-size" "16px", style "text-decoration" (if todo.done then "line-through" else "none")]
+        [ text todo.text
+        , button [onClick (ToggleTodo index), style "margin-left" "10px"]
+            [text (if todo.done then "Undone" else "Done")]
+        ]
 
-viewTask : Task -> Html Msg
-viewTask task =
-    li [ classList [ ("done", task.done) ] ] [ text task.description ]
-
--- Main
 main =
     Browser.sandbox { init = init, update = update, view = view }
